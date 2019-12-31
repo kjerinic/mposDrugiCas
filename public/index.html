@@ -47,6 +47,7 @@
     <script>
         window.addEventListener('load', () => {
             pokreniGeolokaciju();
+            pokreniSW();
         });
         async function pokreniSW() {
             if ('serviceWorker' in navigator) {
@@ -145,7 +146,6 @@
             console.log(drzavaZaPretragu);
             const clanciD = await fetch(`/desetclanaka/${drzavaZaPretragu}`);
             const jsonClanciD = await clanciD.json();
-            pokreniSW();
 
             prikaziClanke(await jsonClanciD);
         };
@@ -154,7 +154,6 @@
         async function vrati10ClanakaZaSvet() {
             const clanciS = await fetch(`/desetclanakasvet/`);
             const jsonClanciS = await clanciS.json();
-            pokreniSW();
 
             prikaziClanke(await jsonClanciS);
         }
