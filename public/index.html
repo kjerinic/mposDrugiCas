@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Guardian PWA</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection" />
+    <script type="text/javascript" src="js/materialize.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="divider"></div>
+        <div class="section">
+            <h6>Država:</h6>
+            <p id="drzava">Nije dozvoljena geolokacija!</p>
+        </div>
+        <div class="divider"></div>
+
+        <a href="#">Početna</a>
+        <div class="divider"></div>
+
+        <br>
+        <p id="p-drzava-ili-svet">Pregledaj top 10 članaka za ceo svet!</p>
+        <a id="btn-vrati-10-clanaka" class="waves-effect waves-light btn disabled">
+            Pregledaj</a>
+        <br>
+        <div class="divider"></div>
+        <br>
+
+    </div>
+
+    <div class="containter">
+        <div class="row" id="clanci">
+
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            pokreniGeolokaciju();
+        });
+        async function pokreniSW() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('registrovan SW'))
+                    .catch(err => 'Nije registrovan SW')              
+            } else {
+                console.log("Ne postoji podrska za sw");
+            }
+        };
+
+        async function pokreniGeolokaciju() {
+            if (navigator.onLine == false) {
+                alert("Niste povezani na mrežu, prikazuju se keširani podaci.");
+                document.getElementById("p-drzava-ili-svet").style.display = "none";
+                document.getElementById("btn-vrati-10-clanaka").style.display = "none";
+                document.getElementById("drzava").style.display = "none";
+
+                var sacekaj = document.createElement('a');
+                sacekaj.classList.add("btn");
+                sacekaj.innerHTML = "Sačekajte";
+                sacekaj.href = "igrica.html";
+                document.body.appendChild(sacekaj);
+
+                if (localStorage.getItem("drzava") != null) {
+                    document.getElementById("btn-vrati-10-clanaka").classList.add("disabled");
+                }
+                if (localStorage.getItem("svet") != null) {
+                    document.getElementById("btn-vrati-10-clanaka").classList.add("disabled");
+                }
+
+                return;
+            }
+
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(async position => {
+                    console.log(position);
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    const geolokOdgovor = await fetch(`/drzava/${lat},${lon}`);
+                    const geolokJson = await geolokOdgovor.json();
+                    const drzava = await geolokJson.results[0].components.country;
+                    localStorage.setItem('drzava', drzava);
+                    document.getElementById("drzava").innerText = drzava;
+                    document.getElementById("p-drzava-ili-svet").innerText = "Pregledaj top 10 članaka za lociranu državu.";
+                    document.getElementById("btn-vrati-10-clanaka").classList.remove("disabled");
+                    document.getElementById("btn-vrati-10-clanaka").setAttribute("onclick", "vrati10ClanakaZaDrzavu()");
+
+                    console.log("Dozvoljena geolokacija.")
+
+                }, (err) => {
+                    localStorage.setItem('svet', "true");
+                    document.getElementById("btn-vrati-10-clanaka").classList.remove("disabled");
+                    document.getElementById("p-drzava-ili-svet").innerText = "Pregledaj top 10 članaka za ceo svet.";
+                    document.getElementById("btn-vrati-10-clanaka").setAttribute("onclick", "vrati10ClanakaZaSvet()");
+                    console.log("Nije dozvoljena geolokacija!");
+                })
+
+            } else {
+                console.log("Nije dozvoljena geolokacija!");
+            }
+        };
+
+        //prikaz
+        async function prikaziClanke(jsonClanci) {
+            const domClanci = document.getElementById("clanci");
+            while (domClanci.firstChild) {
+                domClanci.removeChild(domClanci.firstChild);
+            }
+
+            for (var i = 0; i < jsonClanci.length; i++) {
+                var sredjenClanak = srediClanak(jsonClanci[i]);
+                var redClanaka = document.createElement("div");
+                redClanaka.classList.add("col", "s12", "m6", "l4");
+                var a = document.createElement("a");
+                redClanaka.setAttribute("id", "div-clanak");
+                a.href = sredjenClanak.href;
+                a.innerText = sredjenClanak.naslov;
+
+                redClanaka.appendChild(a);
+                domClanci.appendChild(redClanaka);
+            }
+        };
+
+        function srediClanak(clanak) {
+            return {
+                "href": clanak.webUrl,
+                "naslov": clanak.webTitle
+            }
+        };
+
+        //drzava
+        async function vrati10ClanakaZaDrzavu() {
+            const drzavaZaPretragu = localStorage.getItem("drzava");
+            console.log(drzavaZaPretragu);
+            const clanciD = await fetch(`/desetclanaka/${drzavaZaPretragu}`);
+            const jsonClanciD = await clanciD.json();
+            pokreniSW();
+
+            prikaziClanke(await jsonClanciD);
+        };
+
+        //svet
+        async function vrati10ClanakaZaSvet() {
+            const clanciS = await fetch(`/desetclanakasvet/`);
+            const jsonClanciS = await clanciS.json();
+            pokreniSW();
+
+            prikaziClanke(await jsonClanciS);
+        }
+    </script>
+
+</body>
+
+</html>

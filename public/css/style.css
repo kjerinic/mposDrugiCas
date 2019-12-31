@@ -1,0 +1,15 @@
+body {
+    margin: 15px;
+}
+a {
+    margin: 4px;
+}
+
+#clanci {
+    padding: 15px;
+}
+
+#div-clanak {
+    padding-bottom: 10px;
+    border: teal 1px;
+}
